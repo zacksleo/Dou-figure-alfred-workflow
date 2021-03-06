@@ -43,6 +43,7 @@ type Item struct {
 	Icon         string   `xml:"icon"`
 	Title        string   `xml:"title"`
 	Autocomplete string   `xml:"autocomplete,attr"`
+	Quicklookurl string   `xml:"quicklookurl"`
 }
 
 func GetXml(list []Item) string {
@@ -68,7 +69,7 @@ func showError(msg string) {
 func getContent(query string) {
 	client := &http.Client{}
 
-	req, err := http.NewRequest("POST", ApiUrl, strings.NewReader("types=search&action=searchpic&limit=60&offset=0&wd="+query))
+	req, err := http.NewRequest("POST", ApiUrl, strings.NewReader("types=search&action=searchpic&limit=20&offset=0&wd="+query))
 	if err != nil {
 		showError(err.Error())
 	}
@@ -110,7 +111,7 @@ func getContent(query string) {
 		icon := getFileName(url)
 		wg.Add(1)
 		go saveFile(url)
-		list = append(list, Item{Arg: icon, Title: query, Icon: icon})
+		list = append(list, Item{Arg: icon, Title: query, Icon: icon, Quicklookurl: icon})
 	}
 	xmlStr := GetXml(list)
 	wg.Wait()
@@ -124,13 +125,18 @@ func exist(filename string) bool {
 
 func getFileName(url string) string {
 	urlList := strings.Split(url, "/")
-	return ImgPath + "/" + urlList[len(urlList)-1]
+	return os.Getenv("alfred_workflow_cache") + "/" + ImgPath + "/" + urlList[len(urlList)-1]
 }
 
 func saveFile(url string) string {
 	defer wg.Done()
-	if !exist(ImgPath) {
-		_ = os.Mkdir(ImgPath, 0777)
+	cachePath := os.Getenv("alfred_workflow_cache")
+	if !exist(cachePath) {
+		os.Mkdir(cachePath, 0777)
+	}
+	path := cachePath + "/" + ImgPath
+	if !exist(path) {
+		_ = os.Mkdir(path, 0777)
 	}
 	filename := getFileName(url)
 	if exist(filename) {
